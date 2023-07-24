@@ -6,3 +6,5 @@ logs
 *.logs
 *.env
 node_modules
+db-data
+pgadmin-data
