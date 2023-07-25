@@ -4,6 +4,10 @@ Sandbox project to lear Go language.
 
 ## Build (localhost)
 
+Pre-requesites :
+- Go CLI
+- Docker engine with Compose
+
 ```shell
 # Run database
 $ docker compose up -d
