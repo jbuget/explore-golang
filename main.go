@@ -1,10 +1,15 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
-	// "github.com/lib/pq"
+	"os"
+
+	_ "github.com/joho/godotenv/autoload"
+	_ "github.com/lib/pq"
 )
 
 type User struct {
@@ -14,6 +19,23 @@ type User struct {
 }
 
 func main() {
+	databaseUrl := os.Getenv("DATABASE_URL")
+	log.Println(databaseUrl)
+
+	db, err := sql.Open("postgres", databaseUrl)
+	if err != nil {
+		log.Fatal(err)
+	}
+	rows, err := db.Query("SELECT COUNT(*) FROM accounts")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+	rows.Next()
+	var count string
+	rows.Scan(&count)
+	log.Println(count)
+
 
 	http.HandleFunc("/decode", func(w http.ResponseWriter, r *http.Request) {
 		var user User
@@ -37,6 +59,8 @@ func main() {
 	})
 
 	http.HandleFunc("/accounts", func(w http.ResponseWriter, r *http.Request) {
+
+		fmt.Fprint(w, databaseUrl)
 	})
 
 	fs := http.FileServer(http.Dir("static/"))

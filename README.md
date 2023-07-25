@@ -5,6 +5,9 @@ Sandbox project to lear Go language.
 ## Build (localhost)
 
 ```shell
+# Run database
+$ docker compose up -d
+
 # Download dependencies
 $ go install
 

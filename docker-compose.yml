@@ -7,8 +7,6 @@ services:
       - 15432:5432
     env_file:
       - .env
-    networks:
-      - postgres-network
     volumes:
       - ./db-data/:/var/lib/postgresql/data/
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -21,11 +19,5 @@ services:
       - .env
     depends_on:
       - database
-    networks:
-      - postgres-network
     volumes:
       - ./pgadmin-data/:/var/lib/pgadmin/
-
-networks: 
-  postgres-network:
-    driver: bridge
