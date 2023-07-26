@@ -21,6 +21,13 @@ J'ai commencé à regarder pour avoir une tâche qui *watch* les sources (comme 
 
 Les choses que j'aimerais maîtriser : 
 - tester
+  - https://pkg.go.dev/testing
+  - https://blog.jetbrains.com/go/2022/11/22/comprehensive-guide-to-testing-in-go/
+  - https://github.com/onsi/ginkgo
+  - https://elk.zone/piaille.fr/@jbuget/110781459738617643
+  - Sur conseil de Gabriel, je décide de partir sur Testify (20K stars) ~ https://github.com/stretchr/testify
+    - le module "testing" est trop *brut* à mon goût
+    - je préfère une syntaxe et des outils un peu plus haut niveau, façon light-BDD 
 - debugger
 - source watcher
 - deployer
