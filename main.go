@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
 )
@@ -36,15 +38,26 @@ func main() {
 	rows.Scan(&count)
 	log.Println(count)
 
+	r := chi.NewRouter()
 
-	http.HandleFunc("/decode", func(w http.ResponseWriter, r *http.Request) {
+	// A good base middleware stack
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("welcome to my website!"))
+	})
+
+	r.Post("/decode", func(w http.ResponseWriter, r *http.Request) {
 		var user User
 		json.NewDecoder(r.Body).Decode(&user)
 
 		fmt.Fprintf(w, "%s %s is %d years old!", user.Firstname, user.Lastname, user.Age)
 	})
 
-	http.HandleFunc("/encode", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/encode", func(w http.ResponseWriter, r *http.Request) {
 		peter := User{
 			Firstname: "John",
 			Lastname:  "Doe",
@@ -54,20 +67,7 @@ func main() {
 		json.NewEncoder(w).Encode(peter)
 	})
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Welcome to my website!")
-	})
+	log.Println("Server is up and listening on http://localhost…")
 
-	http.HandleFunc("/accounts", func(w http.ResponseWriter, r *http.Request) {
-
-		fmt.Fprint(w, databaseUrl)
-	})
-
-	fs := http.FileServer(http.Dir("static/"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
-
-	fmt.Printf("Server is up and listening on http://localhost…")
-
-	http.ListenAndServe(":80", nil)
-
+	http.ListenAndServe(":80", r)
 }
