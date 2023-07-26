@@ -30,10 +30,13 @@ Les choses que j'aimerais maîtriser :
   - [autre article](https://earthly.dev/blog/golang-makefile/)
 - importer modules internes
 
-Pour le task manager, je préfère utiliser `GNU Make` plutôt que `Taskfile` car je n'ai rien eu à installer sur mon Mac.
+Pour le **task manager**, je préfère utiliser `GNU Make` plutôt que `Taskfile` car je n'ai rien eu à installer sur mon Mac.
 Juste créer un fichier Makefile et faire `make run`.
 Ca me paraît plus "standard".
 Sur VS Code, il y a une extension opour Makefile : `Makefile Tools`.
+
+Pour **déboguer**, c'était hyper simple. J'a isuivi [cet article](https://www.digitalocean.com/community/tutorials/debugging-go-code-with-visual-studio-code) mais j'aurais pu y aller à l'instinct / habitude.
+Ça a fonctionné du premier coup.
 
 
 ## Misc
