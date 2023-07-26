@@ -13,6 +13,29 @@ Ensuite, j'ai ajouté le middleware Chi-CORS, pour checker vite fait comment ça
 On m'a dit que Gin était mieux pourvu en termes de middlewares, etc.
 Pour l'instant, je trouve que c'est fluide et je retrouve le minimum vital attendu avec Chi.
 
+J'ai tenté d'utiliser le middleware `docgen` mais il n'y a rien dans la doc, la lib n'est plus maintenue depuis nov. 2022, et je ne comprends pas simplement comment faire.
+Ca m'a saoulé.
+J'ai lâché l'affaire.
+
+J'ai commencé à regarder pour avoir une tâche qui *watch* les sources (comme Nodemon pour Node.js).
+
+Les choses que j'aimerais maîtriser : 
+- tester
+- debugger
+- source watcher
+- deployer
+- task manager
+  - [taskfile.dev](https://taskfile.dev/)
+  - [GNU Make](https://tutorialedge.net/golang/makefiles-for-go-developers/) for Golang devs
+  - [autre article](https://earthly.dev/blog/golang-makefile/)
+- importer modules internes
+
+Pour le task manager, je préfère utiliser `GNU Make` plutôt que `Taskfile` car je n'ai rien eu à installer sur mon Mac.
+Juste créer un fichier Makefile et faire `make run`.
+Ca me paraît plus "standard".
+Sur VS Code, il y a une extension opour Makefile : `Makefile Tools`.
+
+
 ## Misc
 
 Installer Chi :
