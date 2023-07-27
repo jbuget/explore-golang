@@ -32,6 +32,8 @@ Je lance le programme `go run main.go`.
 ✅ Ça fonctionne !
 ❌ Par contre, il ne détecte à nouveau plus les tests 🤦‍♂️
 
+## Solution
+
 ✅ Finalement, grâce à cet article – "[A beginners guide to Packages in Golang](https://www.callicoder.com/golang-packages/)" – , j'ai tout compris ! 
 
 ✅ Pour mon problème de tests dans des packages / sous-répertoires qui n'étaient pas pris en compte, il fallait lancer les tests en mode récursif :
