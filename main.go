@@ -11,9 +11,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/jbuget.fr/explore-golang/hello"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
-	"jbuget.fr/explore-golang/hello"
 )
 
 type User struct {

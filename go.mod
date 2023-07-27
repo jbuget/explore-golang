@@ -1,4 +1,4 @@
-module jbuget.fr/explore-golang
+module github.com/jbuget.fr/explore-golang
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
