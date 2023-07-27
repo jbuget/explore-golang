@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/cors"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
+	"jbuget.fr/explore-golang/hello"
 )
 
 type User struct {
@@ -22,6 +23,9 @@ type User struct {
 }
 
 func main() {
+
+	hello.Ciao()
+
 	databaseUrl := os.Getenv("DATABASE_URL")
 	log.Println(databaseUrl)
 
