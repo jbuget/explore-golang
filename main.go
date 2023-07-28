@@ -86,6 +86,12 @@ func main() {
 		json.NewEncoder(w).Encode(peter)
 	})
 
+	r.Get("/pokemon/{id_or_name}", func(w http.ResponseWriter, r *http.Request) {
+		pokemon_id_or_name := chi.URLParam(r, "id_or_name")
+
+		fmt.Fprintf(w, "/%s", pokemon_id_or_name)
+	})
+
 	log.Println("Server is up and listening on http://localhost…")
 
 	http.ListenAndServe(":80", r)
