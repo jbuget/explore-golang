@@ -116,6 +116,22 @@ func main() {
 		fmt.Fprintf(w, "%s", body)
 	})
 
+	r.Post("/accounts/signup", func(w http.ResponseWriter, r *http.Request) {
+		log.Panicln("Not yet implemented `POST /accounts/signup`")
+	})
+
+	r.Post("/accounts/signin", func(w http.ResponseWriter, r *http.Request) {
+		log.Panicln("Not yet implemented `POST /accounts/signin`")
+	})
+
+	r.Get("/accounts/me", func(w http.ResponseWriter, r *http.Request) {
+		log.Panicln("Not yet implemented `GET /accounts/me`")
+	})
+
+	r.Delete("/accounts/me", func(w http.ResponseWriter, r *http.Request) {
+		log.Panicln("Not yet implemented `DELETE /accounts/me`")
+	})
+
 	log.Println("Server is up and listening on http://localhost…")
 
 	http.ListenAndServe(":80", r)
