@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -89,7 +90,30 @@ func main() {
 	r.Get("/pokemon/{id_or_name}", func(w http.ResponseWriter, r *http.Request) {
 		pokemon_id_or_name := chi.URLParam(r, "id_or_name")
 
-		fmt.Fprintf(w, "/%s", pokemon_id_or_name)
+		url := "https://pokeapi.co/api/v2/pokemon/" + pokemon_id_or_name
+
+		http_client := &http.Client{}
+
+		req, err := http.NewRequest(http.MethodGet, url, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		res, getErr := http_client.Do(req)
+		if getErr != nil {
+			log.Fatal(getErr)
+		}
+
+		if res.Body != nil {
+			defer res.Body.Close()
+		}
+
+		body, readErr := ioutil.ReadAll(res.Body)
+		if readErr != nil {
+			log.Fatal(readErr)
+		}
+
+		fmt.Fprintf(w, "%s", body)
 	})
 
 	log.Println("Server is up and listening on http://localhost…")
