@@ -1,5 +1,7 @@
 # Jour 6 - API et concurrence
 
+## Fetching API
+
 Aujourd'hui, j'ai voulu voir comment consommer des API tierces / externes.
 
 Naïvement, j'ai cherché à reproduire ce que je connais en Node.js, c'est-à-dire le fait d'utiliser le pattern `async` / `await`, pour chaque traitement asynchrone.
@@ -24,3 +26,14 @@ Liens :
 - https://go.dev/tour/concurrency/1
 - https://hackernoon.com/asyncawait-in-golang-an-introductory-guide-ol1e34sg
 - ⭐️ https://madeddu.xyz/posts/go-async-await/ 
+
+## Premiers endpoints
+
+J'ai commencé à préparer le terrain et à implémenter un premier endpoint facile : `GET /accounts/me`.
+
+Je ne maîtrise vraiemnt pas suffisamment la techno pour y aller en TDD dès le premier endpoint.
+
+J'obtiens un premier résultat satisfaisant.
+
+Par contre, comme j'utilise le minimum de dépendances, ça m'oblige à faire BEAUCOUP de choses àla main, ce qui est un peu fastidieux.
+Mais c'est comme ça qu'on apprend 🤷‍♂️

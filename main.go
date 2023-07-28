@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/jbuget.fr/explore-golang/hello"
+	"github.com/jbuget.fr/explore-golang/users"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
 )
@@ -125,7 +126,8 @@ func main() {
 	})
 
 	r.Get("/accounts/me", func(w http.ResponseWriter, r *http.Request) {
-		log.Panicln("Not yet implemented `GET /accounts/me`")
+		accounts := users.GetAccount()
+		json.NewEncoder(w).Encode(accounts)
 	})
 
 	r.Delete("/accounts/me", func(w http.ResponseWriter, r *http.Request) {
