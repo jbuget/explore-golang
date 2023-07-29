@@ -3,8 +3,8 @@ package users
 import (
 	"database/sql"
 	"fmt"
-	"log"
-	"os"
+
+	"github.com/jbuget.fr/explore-golang/database"
 )
 
 type Account struct {
@@ -15,21 +15,18 @@ type Account struct {
 	Enabled  bool
 }
 
-func GetAccount() Account {
-	databaseUrl := os.Getenv("DATABASE_URL")
+type AccountRepository struct {
+	DB *database.DB
+}
 
-	db, err := sql.Open("postgres", databaseUrl)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func (repository *AccountRepository) GetAccount() Account {
 	var id int
 	var email string
 	var name string
 	var password string
 	var enabled bool
 
-	row := db.QueryRow("SELECT * FROM accounts WHERE email='clara@example.org' LIMIT 1")
+	row := repository.DB.Client.QueryRow("SELECT * FROM accounts WHERE email='david@example.org' LIMIT 1")
 	switch err := row.Scan(&id, &name, &email, &password, &enabled); err {
 	case sql.ErrNoRows:
 		fmt.Println("No rows were returned!")
@@ -48,22 +45,19 @@ func GetAccount() Account {
 	}
 }
 
-func FindAccounts() []Account {
-	alice := Account{
-		Id:       1,
-		Email:    "alice@example.com",
-		Name:     "Alice",
-		Password: "abcd1234",
-		Enabled:  true,
-	}
-	bob := Account{
-		Id:       2,
-		Email:    "bob@example.com",
-		Name:     "Bob",
-		Password: "abcd1234",
-		Enabled:  true,
+func (repository *AccountRepository) FindAccounts() []Account {
+	rows, _ := repository.DB.Client.Query("SELECT * FROM accounts")
+	defer rows.Close()
+
+	var accounts []Account
+
+	for rows.Next() {
+		var account Account
+		if err := rows.Scan(&account.Id, &account.Name, &account.Email, &account.Password, &account.Enabled); err != nil {
+			return accounts
+		}
+		accounts = append(accounts, account)
 	}
 
-	accounts := []Account{alice, bob}
 	return accounts
 }

@@ -24,6 +24,8 @@ type User struct {
 	Age       int    `json:"age"`
 }
 
+var accountRepository *users.AccountRepository
+
 func main() {
 
 	hello.Ciao()
@@ -45,6 +47,10 @@ func main() {
 	var count string
 	rows.Scan(&count)
 	log.Printf("Number of account(s): %s\n", count)
+
+	accountRepository = &users.AccountRepository{
+		DB: db,
+	}
 
 	r := chi.NewRouter()
 
@@ -126,9 +132,14 @@ func main() {
 		log.Panicln("Not yet implemented `POST /accounts/signin`")
 	})
 
-	r.Get("/accounts/me", func(w http.ResponseWriter, r *http.Request) {
-		accounts := users.GetAccount()
+	r.Get("/accounts", func(w http.ResponseWriter, r *http.Request) {
+		accounts := accountRepository.FindAccounts()
 		json.NewEncoder(w).Encode(accounts)
+	})
+
+	r.Get("/accounts/me", func(w http.ResponseWriter, r *http.Request) {
+		account := accountRepository.GetAccount()
+		json.NewEncoder(w).Encode(account)
 	})
 
 	r.Delete("/accounts/me", func(w http.ResponseWriter, r *http.Request) {
