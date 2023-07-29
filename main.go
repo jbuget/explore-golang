@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -12,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/jbuget.fr/explore-golang/database"
 	"github.com/jbuget.fr/explore-golang/hello"
 	"github.com/jbuget.fr/explore-golang/users"
 	_ "github.com/joho/godotenv/autoload"
@@ -29,13 +29,14 @@ func main() {
 	hello.Ciao()
 
 	databaseUrl := os.Getenv("DATABASE_URL")
-	log.Println(databaseUrl)
-
-	db, err := sql.Open("postgres", databaseUrl)
+	db, err := database.Connect(databaseUrl)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("error: %v\n", err)
+		os.Exit(1)
 	}
-	rows, err := db.Query("SELECT COUNT(*) FROM accounts")
+	log.Println("Database connected")
+
+	rows, err := db.Client.Query("SELECT COUNT(*) FROM accounts")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,7 +44,7 @@ func main() {
 	rows.Next()
 	var count string
 	rows.Scan(&count)
-	log.Println(count)
+	log.Printf("Number of account(s): %s\n", count)
 
 	r := chi.NewRouter()
 
