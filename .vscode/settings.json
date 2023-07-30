@@ -1,0 +1,11 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "driver": "PostgreSQL",
+            "name": "Test",
+            "connectString": "postgres://test:test@localhost:15434/test?sslmode=disable"
+        }
+    ]
+}

@@ -42,7 +42,7 @@ func CreateAccount(name string, email string, password string) AccountWithEncryp
 	return accountWithPassword
 }
 
-func (repository *AccountRepository) InsertAccount(account AccountWithEncryptedPassword) {
+func (repository *AccountRepository) InsertAccount(account AccountWithEncryptedPassword) (int) {
 	sqlStatement := `
 INSERT INTO accounts (name, email, password, enabled) 
 VALUES ($1, $2, $3, $4)
@@ -53,6 +53,7 @@ RETURNING id`
 		panic(err)
 	}
 	log.Println("New record ID is:", id)
+	return id
 }
 
 func (repository *AccountRepository) UpdateAccount(account Account) Account {
