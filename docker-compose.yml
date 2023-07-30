@@ -10,7 +10,18 @@ services:
     volumes:
       - ./db-data/:/var/lib/postgresql/data/
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-  
+
+  database_test:
+    image: 'postgres:15.2-alpine'
+    ports:
+      - 15434:5432
+    environment:
+      - POSTGRES_PASSWORD=test
+      - POSTGRES_USER=test
+      - POSTGRES_DB=test
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
   pgadmin:
     image: dpage/pgadmin4
     ports:

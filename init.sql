@@ -1,9 +1,4 @@
 -- create a table
-CREATE TABLE explore_golang(
-    id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    name TEXT NOT NULL,
-    archived BOOLEAN NOT NULL DEFAULT FALSE
-);
 CREATE TABLE accounts (
     id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -15,10 +10,6 @@ CREATE TABLE accounts (
 );
 
 -- add test data
-INSERT INTO explore_golang (name, archived)
-VALUES ('test row 1', true),
-    ('test row 2', false);
-
 INSERT INTO accounts (name, email, password, enabled)
 VALUES 
     ('Alice', 'alice@example.org', 'password', true),
