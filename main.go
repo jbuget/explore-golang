@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -144,6 +146,21 @@ func main() {
 
 	r.Delete("/accounts/me", func(w http.ResponseWriter, r *http.Request) {
 		log.Panicln("Not yet implemented `DELETE /accounts/me`")
+	})
+
+	r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
+		var name strings.Builder
+		charSet := "abcdedfghijklmnopqrstABCDEFGHIJKLMNOP"
+		length := 20
+		for i := 0; i < length; i++ {
+			random := rand.Intn(len(charSet))
+			randomChar := charSet[random]
+			name.WriteString(string(randomChar))
+		}
+		email := name.String() + "@example.org"
+
+		newAccount := users.CreateAccount(name.String(), email, "Abcd1234")
+		accountRepository.InsertAccount(newAccount)
 	})
 
 	log.Println("Server is up and listening on http://localhost…")

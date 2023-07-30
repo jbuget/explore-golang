@@ -6,9 +6,11 @@ CREATE TABLE explore_golang(
 );
 CREATE TABLE accounts (
     id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    name varchar(100) NOT NULL,
-    email varchar(100) NOT NULL,
-    password varchar(100) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(100) NOT NULL,
     enabled BOOLEAN NOT NULL DEFAULT FALSE
 );
 
