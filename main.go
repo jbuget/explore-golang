@@ -50,9 +50,7 @@ func main() {
 	rows.Scan(&count)
 	log.Printf("Number of account(s): %s\n", count)
 
-	accountRepository = &users.AccountRepository{
-		DB: db,
-	}
+	accountRepository = &users.AccountRepository{DB: db}
 
 	r := chi.NewRouter()
 

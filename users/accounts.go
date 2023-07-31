@@ -6,6 +6,8 @@ import (
 	"log"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/jbuget.fr/explore-golang/database"
 )
 
@@ -35,14 +37,23 @@ func CreateAccount(name string, email string, password string) AccountWithEncryp
 		UpdatedAt: time.Time{},
 		Enabled:   true,
 	}
+	var encryptedPassword string
+
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	if err != nil {
+		panic(err)
+	} else {
+		encryptedPassword = string(bytes)
+	}
+
 	accountWithPassword := AccountWithEncryptedPassword{
 		Account:           account,
-		EncryptedPassword: password,
+		EncryptedPassword: encryptedPassword,
 	}
 	return accountWithPassword
 }
 
-func (repository *AccountRepository) InsertAccount(account AccountWithEncryptedPassword) (int) {
+func (repository *AccountRepository) InsertAccount(account AccountWithEncryptedPassword) int {
 	sqlStatement := `
 INSERT INTO accounts (name, email, password, enabled) 
 VALUES ($1, $2, $3, $4)

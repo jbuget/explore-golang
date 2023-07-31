@@ -6,6 +6,13 @@
             "driver": "PostgreSQL",
             "name": "Test",
             "connectString": "postgres://test:test@localhost:15434/test?sslmode=disable"
+        },
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "driver": "PostgreSQL",
+            "name": "Localhost",
+            "connectString": "postgres://admin:password@localhost:15432/explore_golang?sslmode=disable"
         }
     ]
 }
