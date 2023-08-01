@@ -12,7 +12,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/jbuget.fr/explore-golang/database"
-	"github.com/jbuget.fr/explore-golang/hello"
 	"github.com/jbuget.fr/explore-golang/users"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
@@ -28,8 +27,6 @@ type User struct {
 var accountRepository *users.AccountRepository
 
 func main() {
-
-	hello.Ciao()
 
 	databaseUrl := os.Getenv("DATABASE_URL")
 	db, err := database.Connect(databaseUrl)
