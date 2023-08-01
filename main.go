@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/jbuget.fr/explore-golang/database"
 	"github.com/jbuget.fr/explore-golang/hello"
 	"github.com/jbuget.fr/explore-golang/users"
@@ -126,8 +127,13 @@ func main() {
 		json.NewEncoder(w).Encode(id)
 	})
 
-	r.Post("/oauth/token", func(w http.ResponseWriter, r *http.Request) {
-		log.Panicln("Not yet implemented `POST /accounts/signin`")
+	r.Get("/oauth/token", func(w http.ResponseWriter, r *http.Request) {
+		key := "lorem-ipsum"
+		t := jwt.New(jwt.SigningMethodHS256)
+		claims := t.Claims.(jwt.MapClaims)
+		claims["user"] = "john"
+		s, _ := t.SignedString(key)
+		json.NewEncoder(w).Encode(s)
 	})
 
 	r.Get("/accounts", func(w http.ResponseWriter, r *http.Request) {
