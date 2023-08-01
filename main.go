@@ -40,16 +40,6 @@ func main() {
 	}
 	log.Println("Database connected")
 
-	rows, err := db.Client.Query("SELECT COUNT(*) FROM accounts")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
-	rows.Next()
-	var count string
-	rows.Scan(&count)
-	log.Printf("Number of account(s): %s\n", count)
-
 	accountRepository = &users.AccountRepository{DB: db}
 
 	r := chi.NewRouter()
@@ -124,11 +114,19 @@ func main() {
 		fmt.Fprintf(w, "%s", body)
 	})
 
-	r.Post("/accounts/signup", func(w http.ResponseWriter, r *http.Request) {
-		log.Panicln("Not yet implemented `POST /accounts/signup`")
+	r.Post("/accounts", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		name := r.Form.Get("name")
+		email := r.Form.Get("email")
+		password := r.Form.Get("password")
+
+		account := users.CreateAccount(name, email, password)
+		id := accountRepository.InsertAccount(account)
+		log.Println("Account created with Id ", id)
+		json.NewEncoder(w).Encode(id)
 	})
 
-	r.Post("/accounts/signin", func(w http.ResponseWriter, r *http.Request) {
+	r.Post("/oauth/token", func(w http.ResponseWriter, r *http.Request) {
 		log.Panicln("Not yet implemented `POST /accounts/signin`")
 	})
 

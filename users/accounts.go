@@ -67,6 +67,38 @@ RETURNING id`
 	return id
 }
 
+func (repository *AccountRepository) GetActiveAccountByEmailAndPassword(email string, password string) Account {
+	var account Account
+
+	var encryptedPassword string
+
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	if err != nil {
+		panic(err)
+	} else {
+		encryptedPassword = string(bytes)
+	}
+
+	sqlStatement := `
+	SELECT id, created_at, name, email, enabled 
+	FROM accounts 
+	WHERE email='$1'
+	AND password='$2'
+	AND enabled=true
+	LIMIT 1	
+	`
+	row := repository.DB.Client.QueryRow(sqlStatement, email, encryptedPassword)
+	switch err := row.Scan(&account.Id, &account.CreatedAt, &account.Name, &account.Email, &account.Enabled); err {
+	case sql.ErrNoRows:
+		fmt.Println("No rows were returned!")
+		panic(err)
+	case nil:
+		return account
+	default:
+		panic(err)
+	}
+}
+
 func (repository *AccountRepository) UpdateAccount(account Account) Account {
 	panic("Not yet implemented")
 }
