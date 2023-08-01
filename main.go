@@ -24,7 +24,7 @@ type User struct {
 	Age       int    `json:"age"`
 }
 
-var accountRepository *users.AccountRepository
+var accountRepository users.AccountRepository
 
 func main() {
 
@@ -36,7 +36,7 @@ func main() {
 	}
 	log.Println("Database connected")
 
-	accountRepository = &users.AccountRepository{DB: db}
+	accountRepository = users.AccountRepository{DB: db}
 
 	r := chi.NewRouter()
 
