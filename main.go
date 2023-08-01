@@ -7,10 +7,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/jbuget.fr/explore-golang/database"
 	"github.com/jbuget.fr/explore-golang/users"
 	_ "github.com/joho/godotenv/autoload"
@@ -130,11 +132,18 @@ func main() {
 
 		account := accountRepository.GetActiveAccountByEmail(email)
 		err := bcrypt.CompareHashAndPassword([]byte(account.EncryptedPassword), []byte(password))
-		if err != nil {
+		if err == nil {
+			var sampleSecretKey = []byte("SecretYouShouldHide")
+			token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+				"exp":  time.Now().Add(10 * time.Minute),
+				"user": account.Account.Email,
+				"sub":  account.Account.Email,
+			})
+			tokenString, _ := token.SignedString(sampleSecretKey)
+			json.NewEncoder(w).Encode(tokenString)
+		} else {
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Header().Set("Content-Type", "application/json")
-		} else {
-			json.NewEncoder(w).Encode(account)
 		}
 	})
 
