@@ -39,7 +39,7 @@ func CreateAccount(name string, email string, password string) AccountWithEncryp
 	}
 	var encryptedPassword string
 
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		panic(err)
 	} else {
@@ -55,9 +55,9 @@ func CreateAccount(name string, email string, password string) AccountWithEncryp
 
 func (repository *AccountRepository) InsertAccount(account AccountWithEncryptedPassword) int {
 	sqlStatement := `
-INSERT INTO accounts (name, email, password, enabled) 
-VALUES ($1, $2, $3, $4)
-RETURNING id`
+		INSERT INTO accounts (name, email, password, enabled) 
+		VALUES ($1, $2, $3, $4)
+		RETURNING id`
 	id := 0
 	err := repository.DB.Client.QueryRow(sqlStatement, account.Account.Name, account.Account.Email, account.EncryptedPassword, account.Account.Enabled).Scan(&id)
 	if err != nil {
@@ -67,33 +67,26 @@ RETURNING id`
 	return id
 }
 
-func (repository *AccountRepository) GetActiveAccountByEmailAndPassword(email string, password string) Account {
+func (repository *AccountRepository) GetActiveAccountByEmail(email string) AccountWithEncryptedPassword {
 	var account Account
-
-	var encryptedPassword string
-
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
-	if err != nil {
-		panic(err)
-	} else {
-		encryptedPassword = string(bytes)
-	}
+	var accountWithEncryptedPassword AccountWithEncryptedPassword
 
 	sqlStatement := `
-	SELECT id, created_at, name, email, enabled 
-	FROM accounts 
-	WHERE email='$1'
-	AND password='$2'
-	AND enabled=true
-	LIMIT 1	
+		SELECT id, created_at, name, email, password
+		FROM accounts 
+		WHERE email=$1
+		AND enabled=true
+		LIMIT 1	
 	`
-	row := repository.DB.Client.QueryRow(sqlStatement, email, encryptedPassword)
-	switch err := row.Scan(&account.Id, &account.CreatedAt, &account.Name, &account.Email, &account.Enabled); err {
+	row := repository.DB.Client.QueryRow(sqlStatement, email)
+	switch err := row.Scan(&account.Id, &account.CreatedAt, &account.Name, &account.Email, &accountWithEncryptedPassword.EncryptedPassword); err {
 	case sql.ErrNoRows:
 		fmt.Println("No rows were returned!")
 		panic(err)
 	case nil:
-		return account
+		account.Enabled = true
+		accountWithEncryptedPassword.Account = account
+		return accountWithEncryptedPassword
 	default:
 		panic(err)
 	}

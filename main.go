@@ -5,20 +5,18 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/jbuget.fr/explore-golang/database"
 	"github.com/jbuget.fr/explore-golang/hello"
 	"github.com/jbuget.fr/explore-golang/users"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -115,6 +113,7 @@ func main() {
 		fmt.Fprintf(w, "%s", body)
 	})
 
+	// curl -v -X POST http://localhost/accounts -d "name=tonton&email=tonton@example.org&password=Abcd1234"
 	r.Post("/accounts", func(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 		name := r.Form.Get("name")
@@ -123,17 +122,23 @@ func main() {
 
 		account := users.CreateAccount(name, email, password)
 		id := accountRepository.InsertAccount(account)
-		log.Println("Account created with Id ", id)
 		json.NewEncoder(w).Encode(id)
 	})
 
-	r.Get("/oauth/token", func(w http.ResponseWriter, r *http.Request) {
-		key := "lorem-ipsum"
-		t := jwt.New(jwt.SigningMethodHS256)
-		claims := t.Claims.(jwt.MapClaims)
-		claims["user"] = "john"
-		s, _ := t.SignedString(key)
-		json.NewEncoder(w).Encode(s)
+	// curl -v -X POST http://localhost/accounts/authenticate -d "email=tonton@example.org&password=Abcd1234"
+	r.Post("/accounts/authenticate", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		email := r.Form.Get("email")
+		password := r.Form.Get("password")
+
+		account := accountRepository.GetActiveAccountByEmail(email)
+		err := bcrypt.CompareHashAndPassword([]byte(account.EncryptedPassword), []byte(password))
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Header().Set("Content-Type", "application/json")
+		} else {
+			json.NewEncoder(w).Encode(account)
+		}
 	})
 
 	r.Get("/accounts", func(w http.ResponseWriter, r *http.Request) {
@@ -148,21 +153,6 @@ func main() {
 
 	r.Delete("/accounts/me", func(w http.ResponseWriter, r *http.Request) {
 		log.Panicln("Not yet implemented `DELETE /accounts/me`")
-	})
-
-	r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
-		var name strings.Builder
-		charSet := "abcdedfghijklmnopqrstABCDEFGHIJKLMNOP"
-		length := 20
-		for i := 0; i < length; i++ {
-			random := rand.Intn(len(charSet))
-			randomChar := charSet[random]
-			name.WriteString(string(randomChar))
-		}
-		email := name.String() + "@example.org"
-
-		newAccount := users.CreateAccount(name.String(), email, "Abcd1234")
-		accountRepository.InsertAccount(newAccount)
 	})
 
 	log.Println("Server is up and listening on http://localhost…")
