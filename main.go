@@ -124,8 +124,8 @@ func main() {
 		json.NewEncoder(w).Encode(id)
 	})
 
-	// curl -v -X POST http://localhost/accounts/authenticate -d "email=tonton@example.org&password=Abcd1234"
-	r.Post("/accounts/authenticate", func(w http.ResponseWriter, r *http.Request) {
+	// curl -v -X POST http://localhost/token -d "email=tonton@example.org&password=Abcd1234"
+	r.Post("/token", func(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 		email := r.Form.Get("email")
 		password := r.Form.Get("password")
@@ -140,7 +140,14 @@ func main() {
 				"sub":  account.Account.Email,
 			})
 			tokenString, _ := token.SignedString(sampleSecretKey)
-			json.NewEncoder(w).Encode(tokenString)
+			response := map[string]interface{}{
+				"token":             tokenString,
+				"token_type":        "jwt",
+				"expires_in":        600,
+				"refresh_token":     "tGzv3JOkF0XG5Qx2TlKWIA",
+				"example_parameter": "example_value",
+			}
+			json.NewEncoder(w).Encode(response)
 		} else {
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Header().Set("Content-Type", "application/json")
