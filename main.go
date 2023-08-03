@@ -7,12 +7,11 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/go-chi/jwtauth/v5"
 	"github.com/jbuget.fr/explore-golang/database"
 	"github.com/jbuget.fr/explore-golang/users"
 	_ "github.com/joho/godotenv/autoload"
@@ -28,6 +27,8 @@ type User struct {
 
 var accountRepository users.AccountRepository
 
+var tokenAuth *jwtauth.JWTAuth
+
 func main() {
 
 	databaseUrl := os.Getenv("DATABASE_URL")
@@ -39,6 +40,8 @@ func main() {
 	log.Println("Database connected")
 
 	accountRepository = users.AccountRepository{DB: db}
+
+	tokenAuth = jwtauth.New("HS256", []byte("SecretYouShouldHide"), nil)
 
 	r := chi.NewRouter()
 
@@ -62,110 +65,96 @@ func main() {
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("welcome to my website!"))
+	// Protected routes
+	r.Group(func(r chi.Router) {
+		// Seek, verify and validate JWT tokens
+		r.Use(jwtauth.Verifier(tokenAuth))
+
+		// Handle valid / invalid tokens. In this example, we use
+		// the provided authenticator middleware, but you can write your
+		// own very easily, look at the Authenticator method in jwtauth.go
+		// and tweak it, its not scary.
+		r.Use(jwtauth.Authenticator)
+
+		// curl http://localhost/accounts -H "Authorization: Bearer {token}"
+		r.Get("/accounts", func(w http.ResponseWriter, r *http.Request) {
+			accounts := accountRepository.FindAccounts()
+			json.NewEncoder(w).Encode(accounts)
+		})
+		r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
+			_, claims, _ := jwtauth.FromContext(r.Context())
+			w.Write([]byte(fmt.Sprintf("protected area. hi %v", claims["user_id"])))
+		})
 	})
 
-	r.Post("/decode", func(w http.ResponseWriter, r *http.Request) {
-		var user User
-		json.NewDecoder(r.Body).Decode(&user)
+	// Public routes
+	r.Group(func(r chi.Router) {
+		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("welcome anonymous"))
+		})
 
-		fmt.Fprintf(w, "%s %s is %d years old!", user.Firstname, user.Lastname, user.Age)
-	})
+		r.Get("/pokemon/{id_or_name}", func(w http.ResponseWriter, r *http.Request) {
+			pokemon_id_or_name := chi.URLParam(r, "id_or_name")
 
-	r.Get("/encode", func(w http.ResponseWriter, r *http.Request) {
-		peter := User{
-			Firstname: "John",
-			Lastname:  "Doe",
-			Age:       25,
-		}
+			url := "https://pokeapi.co/api/v2/pokemon/" + pokemon_id_or_name
 
-		json.NewEncoder(w).Encode(peter)
-	})
+			http_client := &http.Client{}
 
-	r.Get("/pokemon/{id_or_name}", func(w http.ResponseWriter, r *http.Request) {
-		pokemon_id_or_name := chi.URLParam(r, "id_or_name")
-
-		url := "https://pokeapi.co/api/v2/pokemon/" + pokemon_id_or_name
-
-		http_client := &http.Client{}
-
-		req, err := http.NewRequest(http.MethodGet, url, nil)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		res, getErr := http_client.Do(req)
-		if getErr != nil {
-			log.Fatal(getErr)
-		}
-
-		if res.Body != nil {
-			defer res.Body.Close()
-		}
-
-		body, readErr := ioutil.ReadAll(res.Body)
-		if readErr != nil {
-			log.Fatal(readErr)
-		}
-
-		fmt.Fprintf(w, "%s", body)
-	})
-
-	// curl -v -X POST http://localhost/accounts -d "name=tonton&email=tonton@example.org&password=Abcd1234"
-	r.Post("/accounts", func(w http.ResponseWriter, r *http.Request) {
-		r.ParseForm()
-		name := r.Form.Get("name")
-		email := r.Form.Get("email")
-		password := r.Form.Get("password")
-
-		account := users.CreateAccount(name, email, password)
-		id := accountRepository.InsertAccount(account)
-		json.NewEncoder(w).Encode(id)
-	})
-
-	// curl -v -X POST http://localhost/token -d "email=tonton@example.org&password=Abcd1234"
-	r.Post("/token", func(w http.ResponseWriter, r *http.Request) {
-		r.ParseForm()
-		email := r.Form.Get("email")
-		password := r.Form.Get("password")
-
-		account := accountRepository.GetActiveAccountByEmail(email)
-		err := bcrypt.CompareHashAndPassword([]byte(account.EncryptedPassword), []byte(password))
-		if err == nil {
-			var sampleSecretKey = []byte("SecretYouShouldHide")
-			token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-				"exp":  time.Now().Add(10 * time.Minute),
-				"user": account.Account.Email,
-				"sub":  account.Account.Email,
-			})
-			tokenString, _ := token.SignedString(sampleSecretKey)
-			response := map[string]interface{}{
-				"token":             tokenString,
-				"token_type":        "jwt",
-				"expires_in":        600,
-				"refresh_token":     "tGzv3JOkF0XG5Qx2TlKWIA",
-				"example_parameter": "example_value",
+			req, err := http.NewRequest(http.MethodGet, url, nil)
+			if err != nil {
+				log.Fatal(err)
 			}
-			json.NewEncoder(w).Encode(response)
-		} else {
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Header().Set("Content-Type", "application/json")
-		}
-	})
 
-	r.Get("/accounts", func(w http.ResponseWriter, r *http.Request) {
-		accounts := accountRepository.FindAccounts()
-		json.NewEncoder(w).Encode(accounts)
-	})
+			res, getErr := http_client.Do(req)
+			if getErr != nil {
+				log.Fatal(getErr)
+			}
 
-	r.Get("/accounts/me", func(w http.ResponseWriter, r *http.Request) {
-		account := accountRepository.GetAccount()
-		json.NewEncoder(w).Encode(account)
-	})
+			if res.Body != nil {
+				defer res.Body.Close()
+			}
 
-	r.Delete("/accounts/me", func(w http.ResponseWriter, r *http.Request) {
-		log.Panicln("Not yet implemented `DELETE /accounts/me`")
+			body, readErr := ioutil.ReadAll(res.Body)
+			if readErr != nil {
+				log.Fatal(readErr)
+			}
+
+			fmt.Fprintf(w, "%s", body)
+		})
+
+		// curl -v -X POST http://localhost/accounts -d "name=tonton&email=tonton@example.org&password=Abcd1234"
+		r.Post("/accounts", func(w http.ResponseWriter, r *http.Request) {
+			r.ParseForm()
+			name := r.Form.Get("name")
+			email := r.Form.Get("email")
+			password := r.Form.Get("password")
+
+			account := users.CreateAccount(name, email, password)
+			id := accountRepository.InsertAccount(account)
+			json.NewEncoder(w).Encode(id)
+		})
+
+		// curl -v -X POST http://localhost/token -d "email=tonton@example.org&password=Abcd1234"
+		r.Post("/token", func(w http.ResponseWriter, r *http.Request) {
+			r.ParseForm()
+			email := r.Form.Get("email")
+			password := r.Form.Get("password")
+
+			account := accountRepository.GetActiveAccountByEmail(email)
+			err := bcrypt.CompareHashAndPassword([]byte(account.EncryptedPassword), []byte(password))
+			if err == nil {
+
+				_, tokenString, _ := tokenAuth.Encode(map[string]interface{}{"user_id": account.Account.Id})
+				response := map[string]interface{}{
+					"token":      tokenString,
+					"token_type": "jwt",
+				}
+				json.NewEncoder(w).Encode(response)
+			} else {
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Header().Set("Content-Type", "application/json")
+			}
+		})
 	})
 
 	log.Println("Server is up and listening on http://localhost…")
