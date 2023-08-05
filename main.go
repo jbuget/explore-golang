@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/go-chi/render"
 	"github.com/jbuget.fr/explore-golang/database"
 	"github.com/jbuget.fr/explore-golang/users"
 	_ "github.com/joho/godotenv/autoload"
@@ -28,6 +29,40 @@ type User struct {
 var accountRepository users.AccountRepository
 
 var tokenAuth *jwtauth.JWTAuth
+
+type AccountCreationRequest struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+func (a *AccountCreationRequest) Bind(r *http.Request) error {
+	return nil
+}
+
+type AccountCreationResponse struct {
+	Id    int    `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+func (acr *AccountCreationResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
+type BearerTokenRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+func (b *BearerTokenRequest) Bind(r *http.Request) error {
+	return nil
+}
+
+type BearerTokenResponse struct {
+	Token     string `json:"token"`
+	TokenType string `json:"token_type"`
+}
 
 func main() {
 
@@ -51,6 +86,8 @@ func main() {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
+	r.Use(middleware.URLFormat)
+	r.Use(render.SetContentType(render.ContentTypeJSON))
 
 	// Basic CORS
 	// for more ideas, see: https://developer.github.com/v3/#cross-origin-resource-sharing
@@ -122,16 +159,25 @@ func main() {
 			fmt.Fprintf(w, "%s", body)
 		})
 
-		// curl -v -X POST http://localhost/accounts -d "name=tonton&email=tonton@example.org&password=Abcd1234"
+		// curl -v -X POST http://localhost/accounts -d '{"name":"Loulou","email":"loulou@example.org","password":"Abcd1234"}'
 		r.Post("/accounts", func(w http.ResponseWriter, r *http.Request) {
-			r.ParseForm()
-			name := r.Form.Get("name")
-			email := r.Form.Get("email")
-			password := r.Form.Get("password")
+			data := &AccountCreationRequest{}
+			if err := render.Bind(r, data); err != nil {
+				render.Render(w, r, ErrInvalidRequest(err))
+				return
+			}
 
-			account := users.CreateAccount(name, email, password)
+			account := users.CreateAccount(data.Name, data.Email, data.Password)
 			id := accountRepository.InsertAccount(account)
-			json.NewEncoder(w).Encode(id)
+
+			resp := &AccountCreationResponse{
+				Id:    id,
+				Name:  account.Account.Name,
+				Email: account.Account.Email,
+			}
+
+			render.Status(r, http.StatusCreated)
+			render.Render(w, r, resp)
 		})
 
 		// curl -v -X POST http://localhost/token -d "email=tonton@example.org&password=Abcd1234"
@@ -161,3 +207,46 @@ func main() {
 
 	http.ListenAndServe(":80", r)
 }
+
+//--
+// Error response payloads & renderers
+//--
+
+// ErrResponse renderer type for handling all sorts of errors.
+//
+// In the best case scenario, the excellent github.com/pkg/errors package
+// helps reveal information on the error, setting it on Err, and in the Render()
+// method, using it to set the application-specific error code in AppCode.
+type ErrResponse struct {
+	Err            error `json:"-"` // low-level runtime error
+	HTTPStatusCode int   `json:"-"` // http response status code
+
+	StatusText string `json:"status"`          // user-level status message
+	AppCode    int64  `json:"code,omitempty"`  // application-specific error code
+	ErrorText  string `json:"error,omitempty"` // application-level error message, for debugging
+}
+
+func (e *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	render.Status(r, e.HTTPStatusCode)
+	return nil
+}
+
+func ErrInvalidRequest(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 400,
+		StatusText:     "Invalid request.",
+		ErrorText:      err.Error(),
+	}
+}
+
+func ErrRender(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 422,
+		StatusText:     "Error rendering response.",
+		ErrorText:      err.Error(),
+	}
+}
+
+var ErrNotFound = &ErrResponse{HTTPStatusCode: 404, StatusText: "Resource not found."}
