@@ -203,9 +203,17 @@ func main() {
 		})
 	})
 
-	log.Println("Server is up and listening on http://localhost…")
+	if os.Getenv("PANIC") == "true" {
+		panic("this is crashing")
+	}
 
-	http.ListenAndServe(":80", r)
+	port := "80"
+	if os.Getenv("PORT") != "" {
+		port = os.Getenv("PORT")
+	}
+
+	http.ListenAndServe(":"+port, r)
+	log.Println("Listening on 0.0.0.0:" + port)
 }
 
 //--
