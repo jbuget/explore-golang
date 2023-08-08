@@ -130,3 +130,12 @@ func (repository *AccountRepository) FindAccounts() []Account {
 
 	return accounts
 }
+
+func (repository *AccountRepository) DeleteAccount(accountId int) {
+	sqlStatement := `DELETE FROM accounts WHERE id = $1;`
+	_, err := repository.DB.Client.Exec(sqlStatement, accountId)
+	if err != nil {
+		fmt.Println("No rows were deleted!")
+		panic(err)
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/go-chi/chi/v5"
@@ -123,6 +124,23 @@ func main() {
 		r.Get("/accounts", func(w http.ResponseWriter, r *http.Request) {
 			accounts := accountRepository.FindAccounts()
 			json.NewEncoder(w).Encode(accounts)
+		})
+
+		// curl -X DELETE http://localhost/accounts/{id} -H "Authorization: Bearer {token}"
+		r.Delete("/accounts/{accountId}", func(w http.ResponseWriter, r *http.Request) {
+			accountId, _ := strconv.Atoi(chi.URLParam(r, "accountId"))
+
+			_, claims, _ := jwtauth.FromContext(r.Context())
+			userId := int(claims["user_id"].(float64))
+			if accountId != userId {
+				render.Render(w, r, ErrForbidden)
+				return
+			}
+
+			accountRepository.DeleteAccount(accountId)
+			render.NoContent(w, r)
+
+			w.Write([]byte("Account deleted"))
 		})
 
 		r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
