@@ -1,13 +1,10 @@
 package main
 
 import (
-	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 
 	"github.com/go-chi/chi/v5"
@@ -15,56 +12,13 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-chi/render"
-	"github.com/jbuget.fr/explore-golang/database"
-	"github.com/jbuget.fr/explore-golang/users"
+	"github.com/jbuget.fr/explore-golang/internal"
+	"github.com/jbuget.fr/explore-golang/internal/core/services"
+	"github.com/jbuget.fr/explore-golang/internal/entrypoints/web"
+	"github.com/jbuget.fr/explore-golang/internal/infrastructure/repositories/accounts"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
-	"golang.org/x/crypto/bcrypt"
 )
-
-type User struct {
-	Firstname string `json:"firstname"`
-	Lastname  string `json:"lastname"`
-	Age       int    `json:"age"`
-}
-
-var accountRepository users.AccountRepository
-
-var tokenAuth *jwtauth.JWTAuth
-
-type AccountCreationRequest struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-func (a *AccountCreationRequest) Bind(r *http.Request) error {
-	return nil
-}
-
-type AccountCreationResponse struct {
-	Id    int    `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
-}
-
-func (acr *AccountCreationResponse) Render(w http.ResponseWriter, r *http.Request) error {
-	return nil
-}
-
-type BearerTokenRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-func (b *BearerTokenRequest) Bind(r *http.Request) error {
-	return nil
-}
-
-type BearerTokenResponse struct {
-	Token     string `json:"token"`
-	TokenType string `json:"token_type"`
-}
 
 func main() {
 
@@ -73,16 +27,17 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
 	databaseUrl := os.Getenv("DATABASE_URL")
-	db, err := database.Connect(databaseUrl)
+	db, err := internal.Connect(databaseUrl)
 	if err != nil {
 		log.Printf("error: %v\n", err)
 		os.Exit(1)
 	}
 	log.Println("Database connected")
 
-	accountRepository = users.AccountRepository{DB: db}
-
-	tokenAuth = jwtauth.New("HS256", []byte("SecretYouShouldHide"), nil)
+	accountsRepository := accounts.NewAccountsRepositoryPostgres(db)
+	accountsService := services.NewAccountsService(accountsRepository)
+	tokenAuth := jwtauth.New("HS256", []byte("SecretYouShouldHide"), nil)
+	handlers := web.NewHTTPController(accountsService, tokenAuth)
 
 	r := chi.NewRouter()
 
@@ -120,111 +75,27 @@ func main() {
 		r.Use(jwtauth.Authenticator)
 
 		// curl http://localhost/accounts -H "Authorization: Bearer {token}"
-		r.Get("/accounts", func(w http.ResponseWriter, r *http.Request) {
-			accounts := accountRepository.FindAccounts()
-			render.JSON(w, r, accounts)
-		})
+		r.Get("/accounts", handlers.ListAccounts)
+
+		// curl http://localhost/accounts/{id} -H "Authorization: Bearer {token}"
+		r.Get("/accounts/{accountId}", handlers.GetAccount)
 
 		// curl -X DELETE http://localhost/accounts/{id} -H "Authorization: Bearer {token}"
-		r.Delete("/accounts/{accountId}", func(w http.ResponseWriter, r *http.Request) {
-			accountId, _ := strconv.Atoi(chi.URLParam(r, "accountId"))
+		r.Delete("/accounts/{accountId}", handlers.DeleteAccount)
 
-			_, claims, _ := jwtauth.FromContext(r.Context())
-			userId := int(claims["user_id"].(float64))
-			if accountId != userId {
-				render.Render(w, r, ErrForbidden)
-				return
-			}
-
-			accountRepository.DeleteAccount(accountId)
-			render.NoContent(w, r)
-
-			w.Write([]byte("Account deleted"))
-		})
-
-		r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
-			_, claims, _ := jwtauth.FromContext(r.Context())
-			w.Write([]byte(fmt.Sprintf("protected area. hi %v", claims["user_id"])))
-		})
+		// curl http://localhost/admin -H "Authorization: Bearer {token}"
+		r.Get("/admin", handlers.GetAdmin)
 	})
 
 	// Public routes
 	r.Group(func(r chi.Router) {
-		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("welcome anonymous"))
-		})
-
-		r.Get("/pokemon/{id_or_name}", func(w http.ResponseWriter, r *http.Request) {
-			pokemon_id_or_name := chi.URLParam(r, "id_or_name")
-
-			url := "https://pokeapi.co/api/v2/pokemon/" + pokemon_id_or_name
-
-			http_client := &http.Client{}
-
-			req, err := http.NewRequest(http.MethodGet, url, nil)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			res, getErr := http_client.Do(req)
-			if getErr != nil {
-				log.Fatal(getErr)
-			}
-
-			if res.Body != nil {
-				defer res.Body.Close()
-			}
-
-			body, readErr := io.ReadAll(res.Body)
-			if readErr != nil {
-				log.Fatal(readErr)
-			}
-
-			fmt.Fprintf(w, "%s", body)
-		})
+		r.Get("/", handlers.GetRoot)
 
 		// curl -v -X POST http://localhost/accounts -d '{"name":"Loulou","email":"loulou@example.org","password":"Abcd1234"}'
-		r.Post("/accounts", func(w http.ResponseWriter, r *http.Request) {
-			data := &AccountCreationRequest{}
-			if err := render.Bind(r, data); err != nil {
-				render.Render(w, r, ErrInvalidRequest(err))
-				return
-			}
-
-			account := users.CreateAccount(data.Name, data.Email, data.Password)
-			id := accountRepository.InsertAccount(account)
-
-			resp := &AccountCreationResponse{
-				Id:    id,
-				Name:  account.Account.Name,
-				Email: account.Account.Email,
-			}
-
-			render.Status(r, http.StatusCreated)
-			render.Render(w, r, resp)
-		})
+		r.Post("/accounts", handlers.CreateAccount)
 
 		// curl -v -X POST http://localhost/token -d "email=tonton@example.org&password=Abcd1234"
-		r.Post("/token", func(w http.ResponseWriter, r *http.Request) {
-			r.ParseForm()
-			email := r.Form.Get("email")
-			password := r.Form.Get("password")
-
-			account := accountRepository.GetActiveAccountByEmail(email)
-			err := bcrypt.CompareHashAndPassword([]byte(account.EncryptedPassword), []byte(password))
-			if err == nil {
-
-				_, tokenString, _ := tokenAuth.Encode(map[string]interface{}{"user_id": account.Account.Id})
-				response := map[string]interface{}{
-					"token":      tokenString,
-					"token_type": "jwt",
-				}
-				render.JSON(w, r, response)
-			} else {
-				w.WriteHeader(http.StatusUnauthorized)
-				w.Header().Set("Content-Type", "application/json")
-			}
-		})
+		r.Post("/token", handlers.GetAccessToken)
 	})
 
 	if os.Getenv("PANIC") == "true" {
@@ -248,47 +119,3 @@ func main() {
 	log.Println("gracefully shutting down")
 	os.Exit(0)
 }
-
-//--
-// Error response payloads & renderers
-//--
-
-// ErrResponse renderer type for handling all sorts of errors.
-//
-// In the best case scenario, the excellent github.com/pkg/errors package
-// helps reveal information on the error, setting it on Err, and in the Render()
-// method, using it to set the application-specific error code in AppCode.
-type ErrResponse struct {
-	Err            error `json:"-"` // low-level runtime error
-	HTTPStatusCode int   `json:"-"` // http response status code
-
-	StatusText string `json:"status"`          // user-level status message
-	AppCode    int64  `json:"code,omitempty"`  // application-specific error code
-	ErrorText  string `json:"error,omitempty"` // application-level error message, for debugging
-}
-
-func (e *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
-	render.Status(r, e.HTTPStatusCode)
-	return nil
-}
-
-func ErrInvalidRequest(err error) render.Renderer {
-	return &ErrResponse{
-		Err:            err,
-		HTTPStatusCode: 400,
-		StatusText:     "Invalid request.",
-		ErrorText:      err.Error(),
-	}
-}
-
-func ErrRender(err error) render.Renderer {
-	return &ErrResponse{
-		Err:            err,
-		HTTPStatusCode: 422,
-		StatusText:     "Error rendering response.",
-		ErrorText:      err.Error(),
-	}
-}
-
-var ErrNotFound = &ErrResponse{HTTPStatusCode: 404, StatusText: "Resource not found."}
-var ErrForbidden = &ErrResponse{HTTPStatusCode: 403, StatusText: "Forbidden."}
