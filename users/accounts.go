@@ -57,7 +57,7 @@ func (repository *AccountRepository) InsertAccount(account AccountWithEncryptedP
 	sqlStatement := `
 		INSERT INTO accounts (name, email, password, enabled) 
 		VALUES ($1, $2, $3, $4)
-		RETURNING id`
+		RETURNING id;`
 	id := 0
 	err := repository.DB.Client.QueryRow(sqlStatement, account.Account.Name, account.Account.Email, account.EncryptedPassword, account.Account.Enabled).Scan(&id)
 	if err != nil {
@@ -76,7 +76,7 @@ func (repository *AccountRepository) GetActiveAccountByEmail(email string) Accou
 		FROM accounts 
 		WHERE email=$1
 		AND enabled=true
-		LIMIT 1	
+		LIMIT 1;
 	`
 	row := repository.DB.Client.QueryRow(sqlStatement, email)
 	switch err := row.Scan(&account.Id, &account.CreatedAt, &account.Name, &account.Email, &accountWithEncryptedPassword.EncryptedPassword); err {
@@ -102,7 +102,7 @@ func (repository *AccountRepository) UpdatePassword(password string) Account {
 
 func (repository *AccountRepository) GetAccount() Account {
 	var account Account
-	row := repository.DB.Client.QueryRow("SELECT id, name, email, enabled FROM accounts WHERE email='david@example.org' LIMIT 1")
+	row := repository.DB.Client.QueryRow("SELECT id, name, email, enabled FROM accounts WHERE email='david@example.org' LIMIT 1;")
 	switch err := row.Scan(&account.Id, &account.Name, &account.Email, &account.Enabled); err {
 	case sql.ErrNoRows:
 		fmt.Println("No rows were returned!")
@@ -115,7 +115,7 @@ func (repository *AccountRepository) GetAccount() Account {
 }
 
 func (repository *AccountRepository) FindAccounts() []Account {
-	rows, _ := repository.DB.Client.Query("SELECT id, name, email, enabled FROM accounts")
+	rows, _ := repository.DB.Client.Query("SELECT id, name, email, enabled FROM accounts;")
 	defer rows.Close()
 
 	var accounts []Account

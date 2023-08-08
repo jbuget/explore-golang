@@ -3,10 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -66,6 +68,10 @@ type BearerTokenResponse struct {
 
 func main() {
 
+	// gracefully exit on keyboard interrupt
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
 	databaseUrl := os.Getenv("DATABASE_URL")
 	db, err := database.Connect(databaseUrl)
 	if err != nil {
@@ -118,6 +124,7 @@ func main() {
 			accounts := accountRepository.FindAccounts()
 			json.NewEncoder(w).Encode(accounts)
 		})
+
 		r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
 			_, claims, _ := jwtauth.FromContext(r.Context())
 			w.Write([]byte(fmt.Sprintf("protected area. hi %v", claims["user_id"])))
@@ -151,7 +158,7 @@ func main() {
 				defer res.Body.Close()
 			}
 
-			body, readErr := ioutil.ReadAll(res.Body)
+			body, readErr := io.ReadAll(res.Body)
 			if readErr != nil {
 				log.Fatal(readErr)
 			}
@@ -212,8 +219,17 @@ func main() {
 		port = os.Getenv("PORT")
 	}
 
-	http.ListenAndServe(":"+port, r)
-	log.Println("Listening on 0.0.0.0:" + port)
+	go func() {
+		if err := http.ListenAndServe(":"+port, r); err != nil {
+			log.Fatal("failed to start server", err)
+			os.Exit(1)
+		}
+	}()
+
+	log.Println("ready to serve requests on " + "0.0.0.0:" + port)
+	<-c
+	log.Println("gracefully shutting down")
+	os.Exit(0)
 }
 
 //--
@@ -258,3 +274,4 @@ func ErrRender(err error) render.Renderer {
 }
 
 var ErrNotFound = &ErrResponse{HTTPStatusCode: 404, StatusText: "Resource not found."}
+var ErrForbidden = &ErrResponse{HTTPStatusCode: 403, StatusText: "Forbidden."}
