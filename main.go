@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -123,7 +122,7 @@ func main() {
 		// curl http://localhost/accounts -H "Authorization: Bearer {token}"
 		r.Get("/accounts", func(w http.ResponseWriter, r *http.Request) {
 			accounts := accountRepository.FindAccounts()
-			json.NewEncoder(w).Encode(accounts)
+			render.JSON(w, r, accounts)
 		})
 
 		// curl -X DELETE http://localhost/accounts/{id} -H "Authorization: Bearer {token}"
@@ -220,7 +219,7 @@ func main() {
 					"token":      tokenString,
 					"token_type": "jwt",
 				}
-				json.NewEncoder(w).Encode(response)
+				render.JSON(w, r, response)
 			} else {
 				w.WriteHeader(http.StatusUnauthorized)
 				w.Header().Set("Content-Type", "application/json")
