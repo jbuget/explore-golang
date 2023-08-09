@@ -15,19 +15,22 @@ type Account struct {
 	Enabled   bool
 }
 
+func NewAccount(name string, email string, createdAt time.Time, updatedAt time.Time, enabled bool) Account {
+	return Account{
+		Name:      name,
+		Email:     email,
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
+		Enabled:   enabled,
+	}
+}
+
 type AccountWithEncryptedPassword struct {
 	Account           Account
 	EncryptedPassword string
 }
 
-func NewAccountWithEncryptedPassword(name string, email string, password string) AccountWithEncryptedPassword {
-	account := Account{
-		Name:      name,
-		Email:     email,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Time{},
-		Enabled:   true,
-	}
+func NewAccountWithEncryptedPassword(account Account, password string) AccountWithEncryptedPassword {
 	var encryptedPassword string
 
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)

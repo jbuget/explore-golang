@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/jbuget.fr/explore-golang/internal"
 	"github.com/jbuget.fr/explore-golang/internal/core/domain"
@@ -45,8 +46,8 @@ func (repository *AccountsRepositoryPostgres) FindAccounts() []domain.Account {
 
 func (repository *AccountsRepositoryPostgres) GetAccountById(id int) domain.Account {
 	var account domain.Account
-	row := repository.DB.Client.QueryRow("SELECT id, name, email, enabled FROM accounts WHERE id=$1 LIMIT 1;", id)
-	switch err := row.Scan(&account.Id, &account.Name, &account.Email, &account.Enabled); err {
+	row := repository.DB.Client.QueryRow("SELECT id, created_at, updated_at, name, email, enabled FROM accounts WHERE id=$1 LIMIT 1;", id)
+	switch err := row.Scan(&account.Id, &account.CreatedAt, &account.UpdatedAt, &account.Name, &account.Email, &account.Enabled); err {
 	case sql.ErrNoRows:
 		fmt.Println("No rows were returned!")
 		panic(err)
@@ -96,8 +97,21 @@ func (repository *AccountsRepositoryPostgres) InsertAccount(account domain.Accou
 	return id
 }
 
-func (repository *AccountsRepositoryPostgres) UpdateAccount(account domain.Account) domain.Account {
-	panic("Not yet implemented")
+func (repository *AccountsRepositoryPostgres) UpdateAccount(account *domain.Account) {
+
+	account.UpdatedAt = time.Now().UTC()
+
+	sqlStatement := `
+		UPDATE accounts
+		SET name=$1,
+			email=$2,
+			updated_at=$3
+		WHERE id=$4;
+	`
+	_, err := repository.DB.Client.Exec(sqlStatement, account.Name, account.Email, account.UpdatedAt, account.Id)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (repository *AccountsRepositoryPostgres) UpdatePassword(password string) domain.Account {

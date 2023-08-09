@@ -1,6 +1,8 @@
 package services
 
 import (
+	"time"
+
 	"github.com/jbuget.fr/explore-golang/internal/core/domain"
 	"github.com/jbuget.fr/explore-golang/internal/core/ports"
 )
@@ -29,12 +31,29 @@ func (srv *service) GetActiveAccountByEmail(email string) domain.AccountWithEncr
 	return srv.accountsRepository.GetActiveAccountByEmail(email)
 }
 
-func (srv *service) InsertAccount(account domain.AccountWithEncryptedPassword) int {
-	return srv.accountsRepository.InsertAccount(account)
+func (srv *service) InsertAccount(name string, email string, password string) domain.Account {
+	account := domain.NewAccount(name, email, time.Now(), time.Time{}, true)
+	accountWithPassword := domain.NewAccountWithEncryptedPassword(account, password)
+	id := srv.accountsRepository.InsertAccount(accountWithPassword)
+	account.Id = id
+	return account
 }
 
-func (srv *service) UpdateAccount(account domain.Account) domain.Account {
-	return srv.accountsRepository.UpdateAccount(account)
+func (srv *service) UpdateAccount(id int, name string, email string) *domain.Account {
+	account := srv.accountsRepository.GetAccountById(id)
+	if (account == domain.Account{}) {
+		return nil
+	}
+
+	if name != "" {
+		account.Name = name
+	}
+	if email != "" {
+		account.Email = email
+	}
+
+	srv.accountsRepository.UpdateAccount(&account)
+	return &account
 }
 
 func (srv *service) UpdatePassword(password string) domain.Account {

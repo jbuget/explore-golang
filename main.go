@@ -80,6 +80,9 @@ func main() {
 		// curl http://localhost/accounts/{id} -H "Authorization: Bearer {token}"
 		r.Get("/accounts/{accountId}", handlers.GetAccount)
 
+		// curl -X PATCH http://localhost/accounts/6 -H "Authorization: Bearer $TOKEN" -d '{"name": "Another name"}'
+		r.Patch("/accounts/{accountId}", handlers.UpdateAccount)
+
 		// curl -X DELETE http://localhost/accounts/{id} -H "Authorization: Bearer {token}"
 		r.Delete("/accounts/{accountId}", handlers.DeleteAccount)
 

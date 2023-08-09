@@ -8,7 +8,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-chi/render"
-	"github.com/jbuget.fr/explore-golang/internal/core/domain"
 	"github.com/jbuget.fr/explore-golang/internal/core/ports"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -38,24 +37,39 @@ func (controller *HTTPController) CreateAccount(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	account := domain.NewAccountWithEncryptedPassword(data.Name, data.Email, data.Password)
-	id := controller.accountsService.InsertAccount(account)
-
-	resp := &AccountCreationResponse{
-		Id:    id,
-		Name:  account.Account.Name,
-		Email: account.Account.Email,
-	}
+	account := controller.accountsService.InsertAccount(data.Name, data.Email, data.Password)
 
 	render.Status(r, http.StatusCreated)
-	render.Render(w, r, resp)
+	render.JSON(w, r, account)
+}
 
+func (controller *HTTPController) UpdateAccount(w http.ResponseWriter, r *http.Request) {
+	accountId, _ := strconv.Atoi(chi.URLParam(r, "accountId"))
+	_, claims, _ := jwtauth.FromContext(r.Context())
+	userId := int(claims["user_id"].(float64))
+	if accountId != userId {
+		render.Render(w, r, ErrForbidden)
+		return
+	}
+
+	data := &AccountUpdateRequest{}
+	if err := render.Bind(r, data); err != nil {
+		render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
+
+	account := controller.accountsService.UpdateAccount(accountId, data.Name, data.Email)
+
+	render.Status(r, http.StatusOK)
+	render.JSON(w, r, account)
 }
 
 func (controller *HTTPController) GetAccessToken(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	email := r.Form.Get("email")
 	password := r.Form.Get("password")
+
+	// TODO: move logic below in domain service
 
 	account := controller.accountsService.GetActiveAccountByEmail(email)
 	err := bcrypt.CompareHashAndPassword([]byte(account.EncryptedPassword), []byte(password))
@@ -67,10 +81,9 @@ func (controller *HTTPController) GetAccessToken(w http.ResponseWriter, r *http.
 		}
 		render.JSON(w, r, response)
 	} else {
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Header().Set("Content-Type", "application/json")
+		render.Render(w, r, ErrForbidden)
+		return
 	}
-
 }
 
 func (controller *HTTPController) GetAccount(w http.ResponseWriter, r *http.Request) {
@@ -82,6 +95,8 @@ func (controller *HTTPController) GetAccount(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	account := controller.accountsService.GetAccountById(userId)
+	account.CreatedAt = account.CreatedAt.Local()
+	account.UpdatedAt = account.UpdatedAt.Local()
 	render.JSON(w, r, account)
 }
 
@@ -120,13 +135,12 @@ func (a *AccountCreationRequest) Bind(r *http.Request) error {
 	return nil
 }
 
-type AccountCreationResponse struct {
-	Id    int    `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+type AccountUpdateRequest struct {
+	Name    string `json:"name"`
+	Email   string `json:"email"`
 }
 
-func (acr *AccountCreationResponse) Render(w http.ResponseWriter, r *http.Request) error {
+func (a *AccountUpdateRequest) Bind(r *http.Request) error {
 	return nil
 }
 
@@ -187,3 +201,4 @@ func ErrRender(err error) render.Renderer {
 
 var ErrNotFound = &ErrResponse{HTTPStatusCode: 404, StatusText: "Resource not found."}
 var ErrForbidden = &ErrResponse{HTTPStatusCode: 403, StatusText: "Forbidden."}
+var ErrUnauthorized = &ErrResponse{HTTPStatusCode: 401, StatusText: "Unauthorized."}

@@ -8,6 +8,6 @@ type AccountsRepository interface {
 	GetAccountById(id int) domain.Account
 	GetActiveAccountByEmail(email string) domain.AccountWithEncryptedPassword
 	InsertAccount(account domain.AccountWithEncryptedPassword) int
-	UpdateAccount(account domain.Account) domain.Account
+	UpdateAccount(account *domain.Account)
 	UpdatePassword(password string) domain.Account
 }
